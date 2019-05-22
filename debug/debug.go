@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"path"
 	"runtime"
 	"runtime/debug"
@@ -17,7 +16,9 @@ import (
 	"github.com/xiusin/router/core"
 	"github.com/xiusin/router/core/components/di"
 )
+
 var l sync.Once
+
 type errHandler struct {
 	core.ErrHandler
 	fileContent   []string
@@ -28,7 +29,7 @@ type errHandler struct {
 func New(r *core.Router) *errHandler {
 	l.Do(func() {
 		_, f, _, _ := runtime.Caller(0)
-		r.Static("/debug_static", path.Dir(f))
+		r.Static("/debug_static", path.Dir(f)+"/assets")
 	})
 	return &errHandler{}
 }
@@ -53,9 +54,9 @@ func (e *errHandler) Recover(c *core.Context) func() {
 func (e *errHandler) errors(c *core.Context, errmsg, trace string) {
 	c.SetStatus(500)
 	_, f, _, _ := runtime.Caller(0)
-	tpl, err := template.ParseFiles(path.Dir(f) + "/debug.html")
+	tpl, err := template.ParseFiles(path.Dir(f) + "/assets/debug.html")
 	if err != nil {
-		c.Logger().Error(err.Error())
+		panic(err.Error())
 		return
 	}
 	jsData, _ := json.Marshal(e.fileContent)
@@ -67,7 +68,7 @@ func (e *errHandler) errors(c *core.Context, errmsg, trace string) {
 		"firstLine": strconv.Itoa(e.firstLine),
 		"firstCode": e.firstFileCode,
 	}); err != nil {
-		log.Println(err.Error())
+		panic(err.Error())
 	}
 	_, _ = c.Writer().Write(buf.Bytes())
 }
