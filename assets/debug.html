@@ -12,7 +12,7 @@
 <div style="font-family:Inconsolata !important;line-height:1.3 !important;font-size:12px !important;">
     <div class="__BtrD__header"><div class="__BtrD__logo __BtrD__tops">
             <span class="__BtrD__logo-img"></span>
-            <span class="__BtrD__theme">Panic error page</span>
+            <span class="__BtrD__theme">Panic</span>
         </div>
     </div>
     <div class="__BtrD__container-fluid">
@@ -29,9 +29,9 @@
             </div>
             <div class="__BtrD__col-md-6 __BtrD__attr __BtrD__middle ">
                 <div class="__BtrD__exception-type">
-                    <span>Panic Error</span>
+                    <span id="path">Path: {{.fistFile}}</span>
                 </div>
-                <div class="__BtrD__exception-msg"><span class="__BtrD__char-string">{{.error}}</span></div>
+                <div class="__BtrD__exception-msg"><span class="__BtrD__char-string">PanicError: {{.error}}</span></div>
                 <div class="__BtrD__code-view" id="proc-main">
                     <textarea id="code-go" name="code" style="display:none">{{.firstCode}}</textarea>
                 </div>
@@ -129,6 +129,7 @@
                 editor.getDoc().setValue(document.getElementById('code-go').value);
                 editor.getDoc().remove();
                 document.querySelector(".CodeMirror").remove()
+                document.querySelector("#path").innerHTML="Path: " + ls[i].dataset.file;
                 editor = initEditor(Number(ls[i].dataset.fline) + 1)
             }
         }(i)

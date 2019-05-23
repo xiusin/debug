@@ -14,72 +14,85 @@ import (
 	"sync"
 
 	"github.com/xiusin/router/core"
-	"github.com/xiusin/router/core/components/di"
 )
 
-var l sync.Once
+var (
+	once        sync.Once
+	codeLineNum = 60
+	codeMiddle  = codeLineNum / 2
+	tplDebug    *template.Template
+)
 
 type errHandler struct {
 	core.ErrHandler
 	fileContent   []string
 	firstFileCode string
+	firstFile     string
 	firstLine     int
 }
 
 func New(r *core.Router) *errHandler {
-	l.Do(func() {
+	once.Do(func() {
 		_, f, _, _ := runtime.Caller(0)
-		r.Static("/debug_static", path.Dir(f)+"/assets")
+		p := path.Dir(f)
+		tplDebug, _ = template.ParseFiles(p + "/assets/debug.html")
+		r.Static("/debug_static", p+"/assets")
 	})
 	return &errHandler{}
 }
+
+func (e *errHandler) init() {
+	e.firstLine = 0
+	e.fileContent = []string{}
+	e.firstFile = ""
+	e.firstFileCode = ""
+}
+
 func (e *errHandler) Recover(c *core.Context) func() {
 	return func() {
 		if err := recover(); err != nil {
-			stack := debug.Stack()
-			if di.Exists(di.LOGGER) {
-				c.Logger().Printf(
-					"msg: %s  Method: %s  Path: %s\n Stack: %s",
-					err,
-					c.Request().Method,
-					c.Request().URL.Path,
-					stack,
-				)
+			e.init()
+			stack := string(debug.Stack())
+			errMsg := fmt.Sprintf("%s", err)
+			c.Logger().Printf(
+				"msg: %s  Method: %s  Path: %s\n",
+				errMsg,
+				c.Request().Method,
+				c.Request().URL.Path,
+			)
+			if c.IsAjax() {
+				c.Writer().Header().Add("Content-Type", "application/json")
+				_, _ = c.Writer().Write([]byte(e.showTraceInfo(errMsg, stack, true)))
+			} else {
+				e.errors(c, errMsg, e.showTraceInfo(errMsg, stack, false))
 			}
-			e.errors(c, fmt.Sprintf("%s", err), e.showTraceInfo(string(stack)))
 		}
 	}
 }
 
-func (e *errHandler) errors(c *core.Context, errmsg, trace string) {
+func (e *errHandler) errors(c *core.Context, errmsg string, trace []byte) {
 	c.SetStatus(500)
-	_, f, _, _ := runtime.Caller(0)
-	tpl, err := template.ParseFiles(path.Dir(f) + "/assets/debug.html")
-	if err != nil {
-		panic(err.Error())
-		return
-	}
 	jsData, _ := json.Marshal(e.fileContent)
 	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, map[string]interface{}{
+	if err := tplDebug.Execute(&buf, map[string]interface{}{
 		"stack":     template.HTML(trace),
 		"error":     errmsg,
 		"fileMap":   string(jsData),
 		"firstLine": strconv.Itoa(e.firstLine),
 		"firstCode": e.firstFileCode,
+		"fistFile":  e.firstFile,
 	}); err != nil {
 		panic(err.Error())
 	}
 	_, _ = c.Writer().Write(buf.Bytes())
 }
 
-func (e *errHandler) showTraceInfo(msg string) string {
-	msgs := strings.Split(strings.Trim(msg, "\n"), "\n")
-	var str string
-	msgs = msgs[1:]
-	l := len(msgs)
-	idx := 1
+func (e *errHandler) showTraceInfo(errMsg, traceMsg string, isAjax bool) []byte {
+	msgs := strings.Split(strings.Trim(traceMsg, "\n"), "\n")[1:]
+	var trace []map[string]string
 	var fileContentMap []string
+
+	l, idx, jsonRet, buf := len(msgs), 1, map[string]interface{}{}, bytes.NewBuffer([]byte{})
 	for i := 0; i < l; i += 2 {
 		paths := strings.Split(msgs[i+1], ":")
 		paths[0] = strings.Trim(paths[0], "\t")
@@ -93,43 +106,61 @@ func (e *errHandler) showTraceInfo(msg string) string {
 		count := len(codes)
 		var firstLine int
 
-		if count-lineNum < 25 && count-50 > 0 {
-			firstLine = count - 50
-			codes = codes[count-50:]
-		} else if lineNum < 25 && count > 50 {
+		if count-lineNum < codeMiddle && count-codeLineNum > 0 {
+			firstLine = count - codeLineNum
+			codes = codes[count-codeLineNum:]
+		} else if lineNum < codeMiddle && count > codeLineNum {
 			codes = codes[:]
 			firstLine = 0
 		} else {
 			var start int
 			var end int
-			if lineNum > 25 {
-				start = lineNum - 25
+			if lineNum > codeMiddle {
+				start = lineNum - codeMiddle
 			}
-			if lineNum+25 > count {
+			if lineNum+codeMiddle > count {
 				end = count
 			} else {
-				end = lineNum + 25
+				end = lineNum + codeMiddle
 			}
 			firstLine = start
 			codes = codes[start:end]
 		}
 		s := strings.Join(codes, "\n")
 		fileContentMap = append(fileContentMap, s)
-
-		str += `<div class="__BtrD__loop-tog __BtrD__l-parent" data-id="proc-` +
-			strconv.Itoa(idx) + `" title="_GLOBAL" data-file="` +
-			paths[0] + `" data-class="trigger_error" data-fline="` + strconv.Itoa(firstLine) + `" data-line="` +
-			line[0] + `"><div class="__BtrD__id __BtrD__loop-tog __BtrD__code">` +
-			strconv.Itoa(idx) + `</div><div class="__BtrD__holder"><span class="__BtrD__name">` +
-			msgs[i] + `</b><i class="__BtrD__line">` +
-			line[0] + `</i></span><span class="__BtrD__path">` +
-			paths[0] + `</span></div></div>`
+		if isAjax {
+			trace = append(trace, map[string]string{
+				"file": paths[0],
+				"line": line[0],
+				"func": msgs[i],
+			})
+		} else {
+			buf.WriteString(`<div class="__BtrD__loop-tog __BtrD__l-parent" data-id="proc-`)
+			buf.WriteString(strconv.Itoa(idx) + `" title="_GLOBAL" data-file="` + paths[0])
+			buf.WriteString(`" data-class="trigger_error" data-fline="` + strconv.Itoa(firstLine) + `" data-line="`)
+			buf.WriteString(line[0] + `"><div class="__BtrD__id __BtrD__loop-tog __BtrD__code">`)
+			buf.WriteString(strconv.Itoa(idx) + `</div><div class="__BtrD__holder"><span class="__BtrD__name">`)
+			buf.WriteString(msgs[i] + `</b><i class="__BtrD__line">` + line[0] + `</i></span><span class="__BtrD__path">`)
+			buf.WriteString(msgs[i] + `</b><i class="__BtrD__line">` + line[0] + `</i></span><span class="__BtrD__path">`)
+			buf.WriteString(paths[0] + `</span></div></div>`)
+		}
 		idx++
 		if e.firstFileCode == "" {
+			jsonRet["file"] = paths[0]
+			jsonRet["line"] = firstLine + 1
 			e.firstFileCode = s
+			e.firstFile = paths[0]
 			e.firstLine = firstLine + 1
 		}
 	}
-	e.fileContent = fileContentMap
-	return str
+	if isAjax {
+		jsonRet["trace"] = trace
+		jsonRet["message"] = errMsg
+		strb, _ := json.Marshal(jsonRet)
+		return strb
+	} else {
+		e.fileContent = fileContentMap
+		return buf.Bytes()
+	}
+
 }
