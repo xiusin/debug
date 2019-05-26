@@ -29,6 +29,7 @@ type errHandler struct {
 	firstFileCode string
 	firstFile     string
 	firstLine     int
+	line          int
 }
 
 func New(r *core.Router) *errHandler {
@@ -81,6 +82,7 @@ func (e *errHandler) errors(c *core.Context, errmsg string, trace []byte) {
 		"firstLine": strconv.Itoa(e.firstLine),
 		"firstCode": e.firstFileCode,
 		"fistFile":  e.firstFile,
+		"line":      e.line,
 	}); err != nil {
 		panic(err.Error())
 	}
@@ -141,7 +143,6 @@ func (e *errHandler) showTraceInfo(errMsg, traceMsg string, isAjax bool) []byte 
 			buf.WriteString(line[0] + `"><div class="__BtrD__id __BtrD__loop-tog __BtrD__code">`)
 			buf.WriteString(strconv.Itoa(idx) + `</div><div class="__BtrD__holder"><span class="__BtrD__name">`)
 			buf.WriteString(msgs[i] + `</b><i class="__BtrD__line">` + line[0] + `</i></span><span class="__BtrD__path">`)
-			buf.WriteString(msgs[i] + `</b><i class="__BtrD__line">` + line[0] + `</i></span><span class="__BtrD__path">`)
 			buf.WriteString(paths[0] + `</span></div></div>`)
 		}
 		idx++
@@ -151,6 +152,7 @@ func (e *errHandler) showTraceInfo(errMsg, traceMsg string, isAjax bool) []byte 
 			e.firstFileCode = s
 			e.firstFile = paths[0]
 			e.firstLine = firstLine + 1
+			e.line = ln
 		}
 	}
 	if isAjax {

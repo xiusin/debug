@@ -33,6 +33,7 @@
                 </div>
                 <div class="__BtrD__exception-msg"><span class="__BtrD__char-string">PanicError: {{.error}}</span></div>
                 <div class="__BtrD__code-view" id="proc-main">
+                    <div style="position: absolute;left: 0;top: 0;width: 100%;height: 100%;z-index: 9999"></div><!--遮罩-->
                     <textarea id="code-go" name="code" style="display:none">{{.firstCode}}</textarea>
                 </div>
             </div>
@@ -112,7 +113,7 @@
 </div>
 <script>
     var fileMap = JSON.parse({{.fileMap}})
-    var editor = initEditor({{.firstLine}});
+    var editor = initEditor({{.firstLine}}, {{.line}});
     var ls = document.querySelectorAll(".__BtrD__active > div");
     ls[0].style.background = "#222731"
     for (var i = 0; i< ls.length; i++) {
@@ -130,12 +131,12 @@
                 editor.getDoc().remove();
                 document.querySelector(".CodeMirror").remove()
                 document.querySelector("#path").innerHTML="Path: " + ls[i].dataset.file;
-                editor = initEditor(Number(ls[i].dataset.fline) + 1)
+                editor = initEditor(Number(ls[i].dataset.fline) + 1, Number(ls[i].dataset.line))
             }
         }(i)
     }
 
-    function initEditor(firstLine){
+    function initEditor(firstLine, line){
         var editor = CodeMirror.fromTextArea(document.getElementById('code-go'), {
             mode: "go",
             lineNumbers: true,
@@ -148,6 +149,7 @@
             gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
         })
         editor.setSize('auto', '860px');
+        editor.setSelection({line:line-firstLine,ch:0},{line:line - firstLine+1,ch:0})
         return editor
     }
     function a(t, e, r, i) {
