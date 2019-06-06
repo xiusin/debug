@@ -61,7 +61,7 @@ func (e *errHandler) Recover(c *core.Context) func() {
 				c.Request().Method,
 				c.Request().URL.Path,
 			)
-			if c.IsAjax() {
+			if c.Request().IsAjax() {
 				c.Writer().Header().Add("Content-Type", "application/json")
 				_, _ = c.Writer().Write([]byte(e.showTraceInfo(errMsg, stack, true)))
 			} else {
