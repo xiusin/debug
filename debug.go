@@ -24,35 +24,23 @@ var (
 )
 
 type errHandler struct {
-	core.ErrHandler
 	fileContent   []string
 	firstFileCode string
 	firstFile     string
 	firstLine     int
 	line          int
 }
-
-func New(r *core.Router) *errHandler {
+var defaultHandler = &errHandler{}
+func Recover(r *core.Router) core.Handler {
 	once.Do(func() {
 		_, f, _, _ := runtime.Caller(0)
 		p := path.Dir(f)
 		tplDebug, _ = template.ParseFiles(p + "/assets/debug.html")
 		r.Static("/debug_static", p+"/assets")
 	})
-	return &errHandler{}
-}
-
-func (e *errHandler) init() {
-	e.firstLine = 0
-	e.fileContent = []string{}
-	e.firstFile = ""
-	e.firstFileCode = ""
-}
-
-func (e *errHandler) Recover(c *core.Context) func() {
-	return func() {
+	return func(c *core.Context) {
 		if err := recover(); err != nil {
-			e.init()
+			defaultHandler.init()
 			stack := string(debug.Stack())
 			errMsg := fmt.Sprintf("%s", err)
 			c.Logger().Printf(
@@ -63,12 +51,19 @@ func (e *errHandler) Recover(c *core.Context) func() {
 			)
 			if c.Request().IsAjax() {
 				c.Writer().Header().Add("Content-Type", "application/json")
-				_, _ = c.Writer().Write([]byte(e.showTraceInfo(errMsg, stack, true)))
+				_, _ = c.Writer().Write([]byte(defaultHandler.showTraceInfo(errMsg, stack, true)))
 			} else {
-				e.errors(c, errMsg, e.showTraceInfo(errMsg, stack, false))
+				defaultHandler.errors(c, errMsg, defaultHandler.showTraceInfo(errMsg, stack, false))
 			}
 		}
 	}
+}
+
+func (e *errHandler) init() {
+	e.firstLine = 0
+	e.fileContent = []string{}
+	e.firstFile = ""
+	e.firstFileCode = ""
 }
 
 func (e *errHandler) errors(c *core.Context, errmsg string, trace []byte) {
