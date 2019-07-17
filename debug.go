@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xiusin/router/core"
+	"github.com/xiusin/router"
 )
 
 var (
@@ -31,14 +31,14 @@ type errHandler struct {
 	line          int
 }
 var defaultHandler = &errHandler{}
-func Recover(r *core.Router) core.Handler {
+func Recover(r *router.Router) router.Handler {
 	once.Do(func() {
 		_, f, _, _ := runtime.Caller(0)
 		p := path.Dir(f)
 		tplDebug, _ = template.ParseFiles(p + "/assets/debug.html")
 		r.Static("/debug_static", p+"/assets")
 	})
-	return func(c *core.Context) {
+	return func(c *router.Context) {
 		if err := recover(); err != nil {
 			defaultHandler.init()
 			stack := string(debug.Stack())
@@ -49,7 +49,7 @@ func Recover(r *core.Router) core.Handler {
 				c.Request().Method,
 				c.Request().URL.Path,
 			)
-			if c.Request().IsAjax() {
+			if c.IsAjax() {
 				c.Writer().Header().Add("Content-Type", "application/json")
 				_, _ = c.Writer().Write([]byte(defaultHandler.showTraceInfo(errMsg, stack, true)))
 			} else {
@@ -66,7 +66,7 @@ func (e *errHandler) init() {
 	e.firstFileCode = ""
 }
 
-func (e *errHandler) errors(c *core.Context, errmsg string, trace []byte) {
+func (e *errHandler) errors(c *router.Context, errmsg string, trace []byte) {
 	c.SetStatus(500)
 	jsData, _ := json.Marshal(e.fileContent)
 	var buf bytes.Buffer
