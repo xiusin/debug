@@ -30,7 +30,9 @@ type errHandler struct {
 	firstLine     int
 	line          int
 }
+
 var defaultHandler = &errHandler{}
+
 func Recover(r *router.Router) router.Handler {
 	once.Do(func() {
 		_, f, _, _ := runtime.Caller(0)
@@ -43,15 +45,10 @@ func Recover(r *router.Router) router.Handler {
 			defaultHandler.init()
 			stack := string(debug.Stack())
 			errMsg := fmt.Sprintf("%s", err)
-			c.Logger().Printf(
-				"msg: %s  Method: %s  Path: %s\n",
-				errMsg,
-				c.Request().Method,
-				c.Request().URL.Path,
-			)
+			c.Logger().Printf("msg: %s  Method: %s  Path: %s\n", errMsg, c.Request().Method, c.Request().URL.Path)
 			if c.IsAjax() {
 				c.Writer().Header().Add("Content-Type", "application/json")
-				_, _ = c.Writer().Write([]byte(defaultHandler.showTraceInfo(errMsg, stack, true)))
+				_, _ = c.Writer().Write(defaultHandler.showTraceInfo(errMsg, stack, true))
 			} else {
 				defaultHandler.errors(c, errMsg, defaultHandler.showTraceInfo(errMsg, stack, false))
 			}
@@ -99,7 +96,7 @@ func (e *errHandler) showTraceInfo(errMsg, traceMsg string, isAjax bool) []byte 
 		lineNum, _ := strconv.Atoi(line[0])
 		codes := strings.Split(string(codeContent), "\n")
 		ln, _ := strconv.Atoi(line[0])
-		codes[ln-1] = codes[ln-1] + "	  //	 <-----  堆栈调用位置"
+		codes[ln-1] = codes[ln-1] + "	  //	 <-----  程序执行位置"
 		count := len(codes)
 		var firstLine int
 
