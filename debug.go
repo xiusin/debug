@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"net/http"
 	"path"
 	"runtime"
 	"runtime/debug"
@@ -43,6 +44,7 @@ func Recover(r *router.Router) router.Handler {
 	return func(c *router.Context) {
 		if err := recover(); err != nil {
 			defaultHandler.init()
+			c.SetStatus(http.StatusInternalServerError)
 			stack := string(debug.Stack())
 			errMsg := fmt.Sprintf("%s", err)
 			c.Logger().Printf("msg: %s  Method: %s  Path: %s\n", errMsg, c.Request().Method, c.Request().URL.Path)
