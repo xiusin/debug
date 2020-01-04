@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Framework Debug</title>
+    <title>XiusinRouter Error</title>
     <link rel="stylesheet" href="/debug_static/debug.css">
     <script src="/debug_static/debug.js"></script>
 </head>
@@ -27,17 +27,17 @@
                     </div>
                 </div>
             </div>
-            <div class="__BtrD__col-md-6 __BtrD__attr __BtrD__middle ">
+            <div class="__BtrD__col-md-9 __BtrD__attr __BtrD__middle ">
                 <div class="__BtrD__exception-type">
                     <span id="path">Path: {{.fistFile}}</span>
                 </div>
                 <div class="__BtrD__exception-msg"><span class="__BtrD__char-string">PanicError: {{.error}}</span></div>
                 <div class="__BtrD__code-view" id="proc-main">
-                    <div style="position: absolute;left: 0;top: 0;width: 100%;height: 100%;z-index: 9999"></div><!--遮罩-->
+{{/*                    <div style="position: absolute;left: 0;top: 0;width: 100%;height: 100%;z-index: 9999"></div><!--遮罩-->*/}}
                     <textarea id="code-go" name="code" style="display:none">{{.firstCode}}</textarea>
                 </div>
             </div>
-            <div class="__BtrD__col-md-3 __BtrD__attr __BtrD__right">
+            <div class="__BtrD__col-md-3 __BtrD__attr __BtrD__right" style="display: none">
                 <div class="__BtrD__global">
                     <div class="__BtrD__labeled" id="tog-1"><span class="__BtrD__caret"></span> &nbsp;&nbsp; Server
                     </div>
