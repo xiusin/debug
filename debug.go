@@ -41,11 +41,11 @@ func Recover(r *pine.Application) pine.Handler {
 		r.Static("/debug_static", p+"/assets")
 	})
 	return func(c *pine.Context) {
-		if err := recover(); err != nil {
+		//if err := recover(); err != nil {
 			defaultHandler.init()
 			c.SetStatus(http.StatusInternalServerError)
 			stack := string(debug.Stack())
-			errMsg := fmt.Sprintf("%s", err)
+			errMsg := fmt.Sprintf("%s", c.Msg)
 			c.Logger().Printf("msg: %s  Method: %s  Path: %s\n", errMsg, c.Request().Method, c.Request().URL.Path)
 			if c.IsAjax() {
 				c.Writer().Header().Add("Content-Type", "application/json")
@@ -53,7 +53,7 @@ func Recover(r *pine.Application) pine.Handler {
 			} else {
 				defaultHandler.errors(c, errMsg, defaultHandler.showTraceInfo(errMsg, stack, false))
 			}
-		}
+		//}
 	}
 }
 
