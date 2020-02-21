@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/xiusin/pine"
 	"html/template"
 	"io/ioutil"
 	"net/http"
@@ -13,8 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/xiusin/router"
 )
 
 var (
@@ -34,14 +33,14 @@ type errHandler struct {
 
 var defaultHandler = &errHandler{}
 
-func Recover(r *router.Router) router.Handler {
+func Recover(r *pine.Application) pine.Handler {
 	once.Do(func() {
 		_, f, _, _ := runtime.Caller(0)
 		p := path.Dir(f)
 		tplDebug, _ = template.ParseFiles(p + "/assets/debug.html")
 		r.Static("/debug_static", p+"/assets")
 	})
-	return func(c *router.Context) {
+	return func(c *pine.Context) {
 		if err := recover(); err != nil {
 			defaultHandler.init()
 			c.SetStatus(http.StatusInternalServerError)
@@ -65,8 +64,8 @@ func (e *errHandler) init() {
 	e.firstFileCode = ""
 }
 
-func (e *errHandler) errors(c *router.Context, errmsg string, trace []byte) {
-	c.SetStatus(500)
+func (e *errHandler) errors(c *pine.Context, errmsg string, trace []byte) {
+	c.SetStatus(http.StatusInternalServerError)
 	jsData, _ := json.Marshal(e.fileContent)
 	var buf bytes.Buffer
 	if err := tplDebug.Execute(&buf, map[string]interface{}{
@@ -98,7 +97,7 @@ func (e *errHandler) showTraceInfo(errMsg, traceMsg string, isAjax bool) []byte 
 		lineNum, _ := strconv.Atoi(line[0])
 		codes := strings.Split(string(codeContent), "\n")
 		ln, _ := strconv.Atoi(line[0])
-		codes[ln-1] = codes[ln-1] + "	  //	 <-----  程序执行位置"
+		codes[ln-1] = codes[ln-1] + "	  //	 <-----   Here"
 		count := len(codes)
 		var firstLine int
 
@@ -152,8 +151,8 @@ func (e *errHandler) showTraceInfo(errMsg, traceMsg string, isAjax bool) []byte 
 	if isAjax {
 		jsonRet["trace"] = trace
 		jsonRet["message"] = errMsg
-		strb, _ := json.Marshal(jsonRet)
-		return strb
+		s, _ := json.Marshal(jsonRet)
+		return s
 	} else {
 		e.fileContent = fileContentMap
 		return buf.Bytes()
