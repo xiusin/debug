@@ -43,7 +43,6 @@ func Recover(r *pine.Application) pine.Handler {
 	return func(c *pine.Context) {
 		//if err := recover(); err != nil {
 			defaultHandler.init()
-			c.SetStatus(http.StatusInternalServerError)
 			stack := string(debug.Stack())
 			errMsg := fmt.Sprintf("%s", c.Msg)
 			c.Logger().Printf("msg: %s  Method: %s  Path: %s\n", errMsg, c.Request().Method, c.Request().URL.Path)
