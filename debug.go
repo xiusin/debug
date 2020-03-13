@@ -7,7 +7,6 @@ import (
 	"github.com/xiusin/pine"
 	"html/template"
 	"io/ioutil"
-	"net/http"
 	"path"
 	"runtime"
 	"runtime/debug"
@@ -37,22 +36,20 @@ func Recover(r *pine.Application) pine.Handler {
 	once.Do(func() {
 		_, f, _, _ := runtime.Caller(0)
 		p := path.Dir(f)
-		tplDebug, _ = template.ParseFiles(p + "/assets/debug.html")
-		r.Static("/debug_static", p+"/assets")
+		tplDebug, _ = template.ParseFiles(path.Join(p, "assets/debug.html"))
+		r.Static("/debug_static", path.Join(p, "assets"))
 	})
 	return func(c *pine.Context) {
-		//if err := recover(); err != nil {
-			defaultHandler.init()
-			stack := string(debug.Stack())
-			errMsg := fmt.Sprintf("%s", c.Msg)
-			c.Logger().Printf("msg: %s  Method: %s  Path: %s\n", errMsg, c.Request().Method, c.Request().URL.Path)
-			if c.IsAjax() {
-				c.Writer().Header().Add("Content-Type", "application/json")
-				_, _ = c.Writer().Write(defaultHandler.showTraceInfo(errMsg, stack, true))
-			} else {
-				defaultHandler.errors(c, errMsg, defaultHandler.showTraceInfo(errMsg, stack, false))
-			}
-		//}
+		defaultHandler.init()
+		stack := string(debug.Stack())
+		errMsg := fmt.Sprintf("%s", c.Msg)
+		c.Logger().Printf("msg: %s  Method: %s  Path: %s", errMsg, c.Request().Method, c.Request().URL.Path)
+		if c.IsAjax() {
+			c.Writer().Header().Add("Content-Type", "application/json")
+			_, _ = c.Writer().Write(defaultHandler.showTraceInfo(errMsg, stack, true))
+		} else {
+			defaultHandler.errors(c, errMsg, defaultHandler.showTraceInfo(errMsg, stack, false))
+		}
 	}
 }
 
@@ -64,7 +61,6 @@ func (e *errHandler) init() {
 }
 
 func (e *errHandler) errors(c *pine.Context, errmsg string, trace []byte) {
-	c.SetStatus(http.StatusInternalServerError)
 	jsData, _ := json.Marshal(e.fileContent)
 	var buf bytes.Buffer
 	if err := tplDebug.Execute(&buf, map[string]interface{}{
